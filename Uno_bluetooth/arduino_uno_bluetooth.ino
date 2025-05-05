@@ -46,6 +46,9 @@ void loop() {
       bluetooth.println(pythonMessage);   
       if (pythonMessage.indexOf("on") > -1) {
         rodeiroStatus = true;
+        digitalWrite(acionar_k1_pin, HIGH); // Freio não acionado
+        digitalWrite(liberar_k2_pin, LOW);
+        digitalWrite(inversor_pin, LOW);
       }
       if (pythonMessage.indexOf("off") > -1) {
         bluetooth.print("YYYYYYY");
@@ -59,8 +62,8 @@ void loop() {
 
     if (rodeiroStatus) {
       // Deixar ambos os comandos da central em seu estado padrão:
-      digitalWrite(acionar_k1_pin, HIGH); // Freio não acionado
-      digitalWrite(liberar_k2_pin, LOW); // Válvula comutada permitindo passagemdo fluido (para permitir que a pastilha volte mais facilmente diminuindo aresistência)
+      //digitalWrite(acionar_k1_pin, HIGH); // Freio não acionado
+      //digitalWrite(liberar_k2_pin, LOW); // Válvula comutada permitindo passagemdo fluido (para permitir que a pastilha volte mais facilmente diminuindo aresistência)
       int value = analogRead(A0); // Ler valor da tensão enviada pelo relé interno do inversor (deve estar em 5V até atingir a velocidade desejada, definida em P281 e P002)
       float voltage = value*(5.0/1023.0); // Converter o valor codificado em tensão real
       if(voltage < 4.5){ // Se a tensão estiver abaixo de 4,90 (compensa pela flutuação entre 5 e 4,90), então terá atingido a velocidade desejada e a frenagem deve ser iniciada
@@ -87,7 +90,7 @@ void loop() {
           bluetooth.println("Start");
 
           // Aguardar 8 segundos (dentro do while) para a frenagem ser realizada.
-          while ((millis() - time_before_while) < 6000) {
+          while ((millis() - time_before_while) < 10000) {
               delay(150);
           }
 
@@ -98,7 +101,7 @@ void loop() {
           time_before_while = millis();
 
           // Aguardar mais 8 segundos dentro do while para garantir liberação total da pressão e reiniciar o ciclo
-          while ((millis() - time_before_while) < 5000) {
+          while ((millis() - time_before_while) < 4000) {
               delay(150);
           }
 
@@ -110,10 +113,11 @@ void loop() {
           bluetooth.println(cycle);
 
           ciclo = ciclo + 1; // Acrescentar à contagem de ciclos
-          } else { // Se não tiver atingido a velocidade, manter o motor ligado até atingir
+
+          digitalWrite(acionar_k1_pin, HIGH); // Freio não acionado
+          digitalWrite(liberar_k2_pin, LOW);
           digitalWrite(inversor_pin, LOW);
-          // Mostra a temperatura atual (neste caso, em tempo real) e o ciclo atual
-      }
+          }
       delay(200); // Tempo necessário para leitura adequada do termopar
     } 
     if (!rodeiroStatus && doOnce) {
