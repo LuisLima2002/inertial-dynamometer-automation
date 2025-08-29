@@ -25,6 +25,7 @@ else:
     exit(1)
 
 should_exit = False
+improper_temperature = False
 
 def handle_socket():
     global should_exit
@@ -144,7 +145,7 @@ def read_from_nano():
                 requests.post(f"{ROTA}/continuous", json=data_obj)
 
                 file_continous.write(f"{current_temp_reading}, {cycle}\n")
-    
+                monitor_current_temperature(current_temp_reading)
                 print("Nano: ", current_temp_reading)
                 lock.release()
         except Exception as e:
@@ -217,6 +218,21 @@ def monitor_trigger_time():
             arduino_uno.write("on".encode())
             rodeiro_is_locked = False
         trigger_lock.release()
+
+def monitor_current_temperature(temperature,setTemperature=90):
+    global improper_temperature
+    if improper_temperature:
+        print("Temperatura imprópria")
+        if temperature <= setTemperature-1:
+            arduino_uno.write("improperTemperatureReset".encode())
+            improper_temperature = False
+    else:
+        if temperature >= setTemperature+1:
+            print("Temperatura imprópria")
+            if not improper_temperature:
+                arduino_uno.write("improperTemperatureSet".encode())
+                improper_temperature = True
+
 
 def test_serial_reading():
     thread_socket = threading.Thread(target=handle_socket)
