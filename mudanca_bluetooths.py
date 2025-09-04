@@ -1,19 +1,10 @@
 import serial
-import matplotlib.pyplot as plt
-import pandas as pd
-import numpy as np
 from datetime import datetime
-import os
 from time import sleep
 import threading
-
-import math 
 import requests
-
 import socketio
 from requests.exceptions import ConnectionError
-
-from timeit import default_timer as timer
 
 # Helper to identify exception on Arduino Uno Bluetooth thread
 class BluetoothTimeoutException(Exception):
@@ -21,9 +12,9 @@ class BluetoothTimeoutException(Exception):
 
 ROTA = "http://localhost:3000"
 
-COM_PORT_BLUETOOTH = "COM8"
-COM_PORT_SERIAL = "COM9"
-BLUETOOTH_TIMEOUT = 500 # Secs
+COM_PORT_BLUETOOTH = "COM7"
+COM_PORT_SERIAL = "COM3"
+BLUETOOTH_TIMEOUT = 280 # Secs
 SERIAL_TIMEOUT = 10 # Secs
 
 arduino_uno_bluetooth = serial.Serial(port=COM_PORT_BLUETOOTH, baudrate=9600, timeout=BLUETOOTH_TIMEOUT, parity=serial.PARITY_EVEN, stopbits=1)
@@ -141,7 +132,7 @@ def serial_thread():
             if nano_msg:
                 lock.acquire()
                 current_temp_reading = float(nano_msg)
-                
+                monitor_current_temperature(current_temp_reading)
                 if cycle == 0:
                     previous_reading = current_temp_reading
 
@@ -170,6 +161,19 @@ def serial_thread():
             else:
                 print("Excecao inesperada: ", e.with_traceback)
                 continue
+
+def monitor_current_temperature(temperature,setTemperature=90):
+    global improper_temperature
+    if improper_temperature:
+        print("Temperatura imprópria")
+        if temperature <= setTemperature-1:
+            print("Temperatura própria")
+            arduino_uno_bluetooth.write("improperTemperatureReset".encode())
+            improper_temperature = False
+    else:
+        if temperature >= setTemperature+1:
+            arduino_uno_bluetooth.write("improperTemperatureSet".encode())
+            improper_temperature = True
 
 def bluetooth_thread():
     global cycle, current_temp_reading, should_exit, rodeiro_is_locked
@@ -209,7 +213,8 @@ def bluetooth_thread():
                 handle_bluetooth_timeout()                
             else:
                 print("DEU ERRO ARDUINO UNO", e.with_traceback)
-                should_exit = True
+                continue
+                # should_exit = True
 
 def test_serial_reading():
     thread_socket = threading.Thread(target=handle_socket)
