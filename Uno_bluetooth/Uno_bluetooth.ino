@@ -53,6 +53,7 @@ void loop()
     if (pythonMessage.indexOf("on") > -1)
     {
       rodeiroStatus = true;
+      safetyTimer = millis();
       digitalWrite(acionar_k1_pin, HIGH); // Freio não acionado
       digitalWrite(liberar_k2_pin, LOW);
       digitalWrite(inversor_pin, LOW);
@@ -86,7 +87,7 @@ void loop()
     // digitalWrite(liberar_k2_pin, LOW); // Válvula comutada permitindo passagemdo fluido (para permitir que a pastilha volte mais facilmente diminuindo aresistência)
     int value = analogRead(A0);             // Ler valor da tensão enviada pelo relé interno do inversor (deve estar em 5V até atingir a velocidade desejada, definida em P281 e P002)
     float voltage = value * (5.0 / 1023.0); // Converter o valor codificado em tensão real
-    if ((voltage < 4.5 && !improprerTemperature) || (millis() - safetyTimer) < 40000) //Habilita freio Se: velocidade atingida e temperatura adequada OU se está acelerando por mais de 40 segundos
+    if ((voltage < 4.5 && !improprerTemperature) || (millis() - safetyTimer) > 200000) //Habilita freio Se: velocidade atingida e temperatura adequada OU se está acelerando por mais de 40 segundos
     { 
       digitalWrite(inversor_pin, HIGH); // Desliga o motor comandando o relé do inversor
 
@@ -132,6 +133,7 @@ void loop()
       digitalWrite(acionar_k1_pin, HIGH); // Freio não acionado
       digitalWrite(liberar_k2_pin, LOW);
       digitalWrite(inversor_pin, LOW);
+      safetyTimer = millis();
     }
     delay(200); // Tempo necessário para leitura adequada do termopar
   }

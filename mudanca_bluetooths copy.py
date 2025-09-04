@@ -6,7 +6,6 @@ from datetime import datetime
 import os
 from time import sleep
 import threading
-import sys
 
 import math 
 import requests
@@ -38,7 +37,6 @@ else:
     exit(1)
 
 should_exit = False
-improper_temperature = False
 
 def handle_socket():
     global should_exit
@@ -143,7 +141,7 @@ def serial_thread():
             if nano_msg:
                 lock.acquire()
                 current_temp_reading = float(nano_msg)
-                monitor_current_temperature(current_temp_reading)
+                
                 if cycle == 0:
                     previous_reading = current_temp_reading
 
@@ -152,7 +150,7 @@ def serial_thread():
                         "current_temp": current_temp_reading,
                         "cycle": cycle,
                     }
-                    requests.post(f"{ROTA}/continuous", json=data_obj)
+                    requests.post(f"{ROTA}/continuous", json=data_obj) 
                     file_continous.write(f"{current_temp_reading}, {cycle}\n")
                     print(f"Temperatura: {current_temp_reading} | Ciclo: {cycle}")
                     previous_reading = current_temp_reading
@@ -170,22 +168,8 @@ def serial_thread():
             elif isinstance(e, KeyboardInterrupt):
                 file_continous.close()
             else:
-                print("Excecao inesperada: ", e)
+                print("Excecao inesperada: ", e.with_traceback)
                 continue
-
-def monitor_current_temperature(temperature):
-    global setTemperature
-    global improper_temperature
-    if improper_temperature:
-        print("Temperatura imprópria")
-        if temperature <= setTemperature-1:
-            print("Temperatura própria")
-            arduino_uno_bluetooth.write("improperTemperatureReset".encode())
-            improper_temperature = False
-    else:
-        if temperature >= setTemperature+1:
-            arduino_uno_bluetooth.write("improperTemperatureSet".encode())
-            improper_temperature = True
 
 def bluetooth_thread():
     global cycle, current_temp_reading, should_exit, rodeiro_is_locked
@@ -229,7 +213,6 @@ def bluetooth_thread():
                 # should_exit = True
 
 def test_serial_reading():
-    arduino_uno_bluetooth.write("improperTemperatureReset".encode())
     thread_socket = threading.Thread(target=handle_socket)
 
     thread_bluetooth = threading.Thread(target=bluetooth_thread)
@@ -240,5 +223,4 @@ def test_serial_reading():
     thread_bluetooth.start()
     thread_serial.start()
 
-setTemperature = 130
 test_serial_reading()
