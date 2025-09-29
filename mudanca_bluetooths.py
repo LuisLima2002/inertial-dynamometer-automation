@@ -1,20 +1,14 @@
 import serial
-import matplotlib.pyplot as plt
-import pandas as pd
-import numpy as np
 from datetime import datetime
-import os
 from time import sleep
 import threading
-import sys
+import argparse
 
-import math 
 import requests
 
 import socketio
 from requests.exceptions import ConnectionError
 
-from timeit import default_timer as timer
 
 # Helper to identify exception on Arduino Uno Bluetooth thread
 class BluetoothTimeoutException(Exception):
@@ -26,6 +20,12 @@ COM_PORT_BLUETOOTH = "COM7"
 COM_PORT_SERIAL = "COM3"
 BLUETOOTH_TIMEOUT = 280 # Secs
 SERIAL_TIMEOUT = 10 # Secs
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--temperature")
+args = parser.parse_args()
+
+setTemperature = int(args.temperature)
 
 arduino_uno_bluetooth = serial.Serial(port=COM_PORT_BLUETOOTH, baudrate=9600, timeout=BLUETOOTH_TIMEOUT, parity=serial.PARITY_EVEN, stopbits=1)
 arduino_nano_serial = serial.Serial(port=COM_PORT_SERIAL, baudrate=9600, timeout=SERIAL_TIMEOUT)
@@ -181,14 +181,14 @@ def monitor_current_temperature(temperature):
         if temperature <= setTemperature-1:
             print("Temperatura própria")
             arduino_uno_bluetooth.write("improperTemperatureReset".encode())
-            improper_temperature = False
+            # improper_temperature = False
     else:
         if temperature >= setTemperature+1:
             arduino_uno_bluetooth.write("improperTemperatureSet".encode())
-            improper_temperature = True
+            # improper_temperature = True
 
 def bluetooth_thread():
-    global cycle, current_temp_reading, should_exit, rodeiro_is_locked
+    global cycle, current_temp_reading, should_exit, rodeiro_is_locked,improper_temperature
     min_temp = -1
     max_temp = -1
 
@@ -205,6 +205,11 @@ def bluetooth_thread():
                     min_temp = current_temp_reading
                 if "End" in uno_msg:
                     max_temp = current_temp_reading
+
+                if "improperTemperatureReset" in uno_msg:
+                    improper_temperature = False
+                elif "improperTemperatureSet" in uno_msg:
+                    improper_temperature = True
 
                 if min_temp != -1 and max_temp != -1:
                     cycle += 1
@@ -240,5 +245,4 @@ def test_serial_reading():
     thread_bluetooth.start()
     thread_serial.start()
 
-setTemperature = 130
 test_serial_reading()
